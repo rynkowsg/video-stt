@@ -7,8 +7,10 @@
     [video-stt.gcp-java.cred :as gcp-cred])
   (:import
     (com.google.api.gax.core FixedCredentialsProvider)
-    (com.google.cloud.speech.v1 SpeechSettings SpeechClient RecognitionConfig
-                                RecognitionConfig$AudioEncoding RecognitionAudio LongRunningRecognizeResponse)))
+    (com.google.cloud.speech.v1 LongRunningRecognizeResponse RecognitionAudio
+                                RecognitionConfig RecognitionConfig$AudioEncoding
+                                SpeechClient SpeechSettings)
+    (java.util.concurrent TimeUnit)))
 
 ;; ---- SPEC --------------------
 
@@ -82,6 +84,10 @@
 
 (defmethod ig/init-key ::instance [_ {:keys [cred]}]
   (speech-api cred))
+
+(defmethod ig/halt-key! ::instance [_ instance]
+  (.shutdown instance)
+  (prn (.awaitTermination instance 10 TimeUnit/SECONDS)))
 
 ;; ---- DOCS --------------------
 
