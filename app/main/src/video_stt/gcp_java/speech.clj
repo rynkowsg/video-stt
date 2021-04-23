@@ -66,7 +66,7 @@
     (->> @res
          (#(.getResultsList ^LongRunningRecognizeResponse %))
          (map #(-> % .getAlternativesList (.get 0) .getTranscript))
-         (str/join "\n"))))
+         (map #(str % "\n")))))
 
 ;; call to-text for 30 sec audio
 #_(-> (do (require '[dev]) (dev/state))
@@ -86,8 +86,14 @@
   (speech-api cred))
 
 (defmethod ig/halt-key! ::instance [_ instance]
-  (.shutdown instance)
-  (prn (.awaitTermination instance 10 TimeUnit/SECONDS)))
+  (let [tbefore (System/currentTimeMillis)
+        _ (.shutdown instance)
+        _ (prn (.awaitTermination instance 10 TimeUnit/SECONDS))
+        tafter (System/currentTimeMillis)
+        ]
+    (prn "elapsed: " (- tafter tbefore)))
+  ;; TODO: correct this
+  )
 
 ;; ---- DOCS --------------------
 
