@@ -2,20 +2,14 @@
 
 # Example:
 #
-#     ./run.sh -c credentials.json -i video.mp4 -o transcription.txt
+#     ./bin/run.sh -c credentials.json -i video.mp4 -o transcription.txt
 #
 # or
 #
-#     GOOGLE_APPLICATION_CREDENTIALS=credentials.json ./run.sh -i video.mp4 -o transcription.txt
+#     GOOGLE_APPLICATION_CREDENTIALS=credentials.json ./bin/run.sh -i video.mp4 -o transcription.txt
 #
+#
+# Notice:
+# The script has to be executed from the root directory.
 
-# discover project root
-SCRIPT_PATH="$(cd "$(dirname "$0")"; pwd -P)"
-ROOT_DIR=$(cd "$SCRIPT_PATH/.."; pwd)
-
-(
-  # always run cmd from project root
-  # (that way the script can be run from any directory)
-  cd "${ROOT_DIR}";
-  clojure -M:run-m "$@";
-)
+clojure -M:run-m "$@"
