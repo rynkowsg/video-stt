@@ -1,5 +1,6 @@
 (ns dev
   (:require
+    [clojure.java.io :as io]
     [clojure.tools.namespace.repl :as tn]
     [integrant.core :as ig]
     [integrant.repl :as ig-repl]
@@ -15,7 +16,8 @@
   (ig-repl/go))
 
 (defn go []
-  (init-system (system/system-config)))
+  (let [cred (io/resource "stt-playground-310715-193109fadcd0-stt-processor-4.json")]
+    (init-system (system/system-config cred))))
 
 (defn reset
   "Suspends system, reloads any files which have changed, resumes system"

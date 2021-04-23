@@ -7,11 +7,12 @@
   (let [output (cond
                  (some? output)  output
                  (some? output-dir) (str output-dir "/" (fs/name input) ".flac")
-                 true (throw (ex-info "Output not specified" params)))]
+                 true (throw (ex-info "Output not specified" params)))
+        result (sh "avconv" "-i" input "-ac" "1" "-ab" "128k" "-vn" "-y" output)]
+    (println "File saved at" output)
     {:input input
      :output output
-     :result (sh "avconv" "-i" input "-ac" "1" "-ab" "128k" "-vn" "-y" output)}
-    ))
+     :result result}))
 #_(extract-audio
     {:input "/Users/greg/Desktop/sample.mp4"
      :output-dir "/Users/greg/Desktop"})

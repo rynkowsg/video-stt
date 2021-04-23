@@ -7,8 +7,10 @@
     [video-stt.gcp-java.cred :as gcp-cred])
   (:import
     (com.google.api.gax.core FixedCredentialsProvider)
-    (com.google.cloud.speech.v1 SpeechSettings SpeechClient RecognitionConfig
-                                RecognitionConfig$AudioEncoding RecognitionAudio LongRunningRecognizeResponse)))
+    (com.google.cloud.speech.v1 LongRunningRecognizeResponse RecognitionAudio
+                                RecognitionConfig RecognitionConfig$AudioEncoding
+                                SpeechClient SpeechSettings)
+    (java.util.concurrent TimeUnit)))
 
 ;; ---- SPEC --------------------
 
@@ -64,7 +66,7 @@
     (->> @res
          (#(.getResultsList ^LongRunningRecognizeResponse %))
          (map #(-> % .getAlternativesList (.get 0) .getTranscript))
-         (str/join "\n"))))
+         (str/join))))
 
 ;; call to-text for 30 sec audio
 #_(-> (do (require '[dev]) (dev/state))
@@ -82,6 +84,16 @@
 
 (defmethod ig/init-key ::instance [_ {:keys [cred]}]
   (speech-api cred))
+
+(defmethod ig/halt-key! ::instance [_ instance]
+  (let [tbefore (System/currentTimeMillis)
+        _ (.shutdown instance)
+        _ (prn (.awaitTermination instance 10 TimeUnit/SECONDS))
+        tafter (System/currentTimeMillis)
+        ]
+    (prn "elapsed: " (- tafter tbefore)))
+  ;; TODO: correct this
+  )
 
 ;; ---- DOCS --------------------
 

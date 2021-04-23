@@ -32,17 +32,20 @@
         (.setCredentials ^StorageOptions$Builder $ cred)
         (.build ^StorageOptions$Builder $)))
 
-(defn storage [cred]
+(defn storage
+  [cred]
   (.getService (storageOptions cred)))
 
-(defn ->bucket [s name]
+(defn ->bucket ^Bucket
+  [s name]
   (.get s name (make-array Storage$BucketGetOption 0)))
 
-(defn ->blob [s bucket path & generation]
-  (let [blob-id (if (some? generation)
-                  (BlobId/of bucket path generation)
-                  (BlobId/of bucket path))]
-    (.get s ^BlobId blob-id)))
+(defn ->blob ^Blob
+  ([s bucket path]
+   (let [blob-id (BlobId/of bucket path)]
+     (.get s ^BlobId blob-id)))
+  ([s ^BlobInfo bi]
+   (->blob s (.getBucket bi) (.getName bi))))
 
 (defn ->node
   ([^Storage s ^Object {:keys [bucket path] :as params}]
@@ -50,6 +53,11 @@
      (and bucket path) (->blob s bucket path)
      (and bucket) (->bucket s bucket)
      true s)))
+
+(defmulti ->uri class)
+(defmethod ->uri Storage [_] "gs://")
+(defmethod ->uri Bucket [^Bucket b] (str "gs://" (.getName b)))
+(defmethod ->uri BlobInfo [^BlobInfo b] (str "gs://" (.getBucket b) "/" (.getName b)))
 
 (defn- parse-gs-uri [uri]
   (let [r #"(?<schema>[a-zA-Z]+)://((?<bucket>[a-zA-Z-]+)(/(?<path>[a-zA-Z/-\\.]*))?)?"
@@ -63,7 +71,7 @@
   [^Storage s uri]
   (->node s (parse-gs-uri uri)))
 
-(defn- bucket-info
+(defn ->bucket-info ^BucketInfo
   [{:keys [name storage-class location] :as params}]
   (prn params)
   (-> (BucketInfo/newBuilder name)
@@ -75,7 +83,7 @@
 (defn create-bucket
   [^Storage s name & params]
   (let [params (merge {:name name :storage-class "STANDARD" :location "EUROPE-WEST2"} params)
-        bucket (.create s (bucket-info params) (make-array Storage$BucketTargetOption 0))]
+        bucket (.create s (->bucket-info params) (make-array Storage$BucketTargetOption 0))]
     {:name (.getName bucket)}))
 
 ;; https://cloud.google.com/storage/docs/deleting-buckets#storage-delete-bucket-java
@@ -108,10 +116,13 @@
   (let [b (->blob s bucket name)]
     (.getContent ^Blob b (make-array Blob$BlobSourceOption 0))))
 
-(defn upload-file-small [^Storage s blobInfo filepath]
+(defn ^{:tag 'bytes} ->bytes [path]
+  (Files/readAllBytes path))
+
+(defn upload-file-small [^Storage s ^BlobInfo blobInfo filepath]
   (let [path (->path filepath)
-        bytes (Files/readAllBytes path)]
-    (.create s blobInfo bytes (make-array Storage$BlobTargetOption 0))))
+        content (->bytes path)]
+    (.create ^Storage s ^BlobInfo blobInfo content (make-array Storage$BlobTargetOption 0))))
 
 (defn upload-file-large [^Storage s blobInfo filepath]
   (with-open [is     (io/input-stream filepath)
@@ -143,6 +154,10 @@
       (upload-file-small s blobInfo filepath)
       (upload-file-large s blobInfo filepath))))
 
+(defn delete-blob
+  [^Blob b]
+  (.delete b (make-array Blob$BlobSourceOption 0)))
+
 ;; ---- DI ----------------------
 
 (spec/def ::instance ::storage)
@@ -161,10 +176,9 @@
       (def s (-> (dev/state) (::instance)))
       s)
 
-  (uri->node s "gs://")
-  (uri->node s "gs://rynkowski-tmp-audio")
-  (uri->node s "gs://rynkowski-tmp-audio/sample.mp4")
-  (uri->node s "gs://rynkowski-tmp-audio/temp/sample.flac")
+  (-> (uri->node s "gs://") (->uri))
+  (-> (uri->node s "gs://rynkowski-tmp-audio") (->uri))
+  (-> (uri->node s "gs://rynkowski-tmp-audio/sample.mp4") (->uri))
 
   (create-bucket s "greg-test123456789")
   (delete-bucket s "greg-test123456789")
@@ -179,4 +193,7 @@
   (upload-file s "README.md" "rynkowski-tmp-audio")
 
   ;; upload large file
-  (upload-file s "sample.mp4" "rynkowski-tmp-audio"))
+  (upload-file s "sample.mp4" "rynkowski-tmp-audio")
+
+  (delete-blob (->blob s "rynkowski-tmp-audio" "README.md"))
+  )
