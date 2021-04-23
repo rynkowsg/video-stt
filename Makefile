@@ -1,11 +1,4 @@
 ####
-# SCRIPTS
-.PHONY: run-main
-
-run-main:
-	-clojure -M:run-m
-
-####
 # DEVELOPMENT ENV
 .PHONY: check-deps repl lint
 
